@@ -124,40 +124,41 @@ jobs:
       - name: Prepare YouTube iPA
         id: prepare_youtube
         run: |
+          # Download the YouTube IPA
           wget "$YOUTUBE_URL" --quiet --no-verbose -O main/YouTube.ipa
           cd ${{ github.workspace }}/main
+          
           # Rename the IPA to a ZIP file and extract it using ditto
           mv YouTube.ipa YouTube.zip
           ditto -x -k YouTube.zip .
-
-# Debug: List the contents of the app directory to ensure extraction worked
+          
+          # Debug: List the contents of the app directory to ensure extraction worked
           ls -la "$(pwd)/Payload/YouTube.app/"
-
-# Debug: Print the contents of Info.plist for inspection
+          
+          # Debug: Print the contents of Info.plist for inspection
           plutil -p "$(pwd)/Payload/YouTube.app/Info.plist" || echo "Warning: Failed to print Info.plist"
-
-# Extract the YouTube version:
-# Try reading CFBundleVersion; if empty, fall back to CFBundleShortVersionString
+          
+          # Extract the YouTube version:
+          # Try reading CFBundleVersion; if empty, fall back to CFBundleShortVersionString
           youtube_version=$(defaults read "$(pwd)/Payload/YouTube.app/Info.plist" CFBundleVersion 2>/dev/null)
           if [ -z "$youtube_version" ]; then
-          youtube_version=$(defaults read "$(pwd)/Payload/YouTube.app/Info.plist" CFBundleShortVersionString 2>/dev/null)
+            youtube_version=$(defaults read "$(pwd)/Payload/YouTube.app/Info.plist" CFBundleShortVersionString 2>/dev/null)
           fi
-
-# Check if a version was extracted; if not, exit with an error
+          
+          # Check if a version was extracted; if not, exit with an error
           if [ -z "$youtube_version" ]; then
-          echo "Error: Could not extract YouTube version from Info.plist"
-          exit 1
+            echo "Error: Could not extract YouTube version from Info.plist"
+            exit 1
           fi
-
+          
           echo "==> YouTube v$youtube_version downloaded!"
-
-# Update the Makefile with the extracted YouTube version (escape special characters as needed)
+          
+          # Update the Makefile with the extracted YouTube version (escape special characters as needed)
           safe_version=$(printf '%s\n' "$youtube_version" | sed -e 's/[\/&]/\\&/g')
           sed -i '' "17s#.*#YOUTUBE_VERSION = ${safe_version}#g" Makefile || echo "Warning: sed command failed"
-
-# Write the extracted version to the GitHub output
+          
+          # Write the extracted version to the GitHub output
           echo "youtube_version=${youtube_version}" >> $GITHUB_OUTPUT
-
         env:
           THEOS: ${{ github.workspace }}/theos
           YOUTUBE_URL: ${{ env.URL_YT }}
@@ -173,7 +174,6 @@ jobs:
           echo "package=$(ls -t packages | head -n1)" >>$GITHUB_OUTPUT
           echo -e "==> \033[1mSHASUM256: $(shasum -a 256 packages/*.ipa | cut -f1 -d' ')\033[0m"
           echo -e "==> \033[1mBundle ID: ${{ env.BUNDLE_ID }}\033[0m"
-
         env:
           THEOS: ${{ github.workspace }}/theos
           UYOU_VERSION: ${{ inputs.uyou_version }}
