@@ -127,7 +127,7 @@ jobs:
           wget "$YOUTUBE_URL" --quiet --no-verbose -O main/YouTube.ipa
           cd ${{ github.workspace }}/main
           mv YouTube.ipa YouTube.zip
-          unzip -q -O UTF-8 YouTube.zip
+          ditto -x -k YouTube.zip .
           youtube_version=$(defaults read "$(pwd)/Payload/YouTube.app/Info.plist" CFBundleVersion)
           echo "==> YouTube v$youtube_version downloaded!"
           sed -i '' "17s#.*#YOUTUBE_VERSION = ${youtube_version}#g" Makefile
