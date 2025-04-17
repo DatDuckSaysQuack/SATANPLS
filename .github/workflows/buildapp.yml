@@ -122,20 +122,34 @@ jobs:
           echo URL_YT=$URL_YT >> $GITHUB_ENV
 
       - name: Prepare YouTube iPA
+             # ──────────────────────────────────────────────────────────────────────
+      #  REPLACE the original “Prepare YouTube iPA” step with the one below
+      # ──────────────────────────────────────────────────────────────────────
+      - name: Prepare YouTube iPA
         id: prepare_youtube
+        env:
+          THEOS: ${{ github.workspace }}/theos
+          YOUTUBE_URL: ${{ env.URL_YT }}     # comes from the earlier “Hash YT ipa url” step
         run: |
-          wget "$YOUTUBE_URL" --quiet --no-verbose -O main/YouTube.ipa
           cd ${{ github.workspace }}/main
+
+          # 1. Download the file – follow redirects & keep the real filename
+          wget -q -L --content-disposition -O YouTube.ipa "$YOUTUBE_URL"
+
+          # 2. Sanity‑check: bail out if we didn’t really get a ZIP/IPA
+          if ! file YouTube.ipa | grep -q "Zip archive data"; then
+            echo "::error::The link you supplied did not return an IPA/ZIP file."
+            head -n 20 YouTube.ipa   # shows the first lines (usually HTML) for debugging
+            exit 1
+          fi
+
+          # 3. Continue exactly as before
           mv YouTube.ipa YouTube.zip
           unzip -q YouTube.zip
           youtube_version=$(defaults read "$(pwd)/Payload/YouTube.app/Info" CFBundleVersion)
           echo "==> YouTube v$youtube_version downloaded!"
           sed -i '' "17s#.*#YOUTUBE_VERSION = ${youtube_version}#g" Makefile
           echo "youtube_version=${youtube_version}" >> $GITHUB_OUTPUT
-
-        env:
-          THEOS: ${{ github.workspace }}/theos
-          YOUTUBE_URL: ${{ env.URL_YT }}
 
       - name: Fix compiling & Build Package
         id: build_package
